@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(PROJECT_NAME RayMarchingWizard)
+set(PROJECT_NAME RayMarcher)
 
 project(${PROJECT_NAME} LANGUAGES CXX)
 
