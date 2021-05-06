@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/shaders">
+        <file>shaders/raymarcher.frag</file>
+        <file>shaders/vertexshader.vert</file>
+    </qresource>
+    <qresource prefix="/about">
+        <file>README</file>
+        <file>ABOUT</file>
+    </qresource>
+    <qresource prefix="/examples">
+        <file>examples/examplescene.scene</file>
+    </qresource>
+</RCC>
