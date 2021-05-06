@@ -4,7 +4,7 @@
         <file>shaders/vertexshader.vert</file>
     </qresource>
     <qresource prefix="/about">
-        <file>README</file>
+        <file>README.md</file>
         <file>ABOUT</file>
     </qresource>
     <qresource prefix="/examples">
