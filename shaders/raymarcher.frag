@@ -8,6 +8,10 @@
 #define TEMPLATE_SDSCENE return INF;
 #endif
 
+#ifndef TEMPLATE_COLOR
+#define TEMPLATE_COLOR vec3(1, 1, 1)
+#endif
+
 vec3 rotated(vec3 p, vec4 q)
 {
     return p + 2.0 * cross(q.xyz, cross(q.xyz, p) + q.w * p);
@@ -43,6 +47,17 @@ vec3 rotated(vec3 p, vec4 q)
         return min(sdist(p, o.o1), sdist(p, o.o2)); \
     })
 
+#define DIFFERENCE(type1, type2) \
+    SDTYPE(Difference##type1##type2, \
+    { \
+        type1 o1; \
+        type2 o2; \
+        Transform t; \
+    }, \
+    { \
+        return max(sdist(p, o.o1), -sdist(p, o.o2)); \
+    });
+
 varying vec2 uv;
 
 out vec4 fragColor;
@@ -58,7 +73,7 @@ uniform float HEIGHT;
 uniform bool SHADOWS_ENABLED = true;
 uniform float RENDER_DISTANCE = 40;
 uniform float MIN_HIT_DIST = 0.001;
-uniform float EPSILON = 0.005;
+#define EPSILON MIN_HIT_DIST * 2.0
 uniform int MAX_STEPS = 400;
 
 uniform struct Camera
@@ -108,6 +123,42 @@ SDTYPE(Plane,
 }
 );
 
+SDTYPE(AABBox,
+{
+    float rx;
+    float ry;
+    float rz;
+    Transform t;
+},
+{
+    vec3 d = abs(p) - vec3(o.rx, o.ry, o.rz);
+    return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
+}
+);
+
+SDTYPE(Cylinder,
+{
+    float radius;
+    float height2;
+    Transform t;
+},
+{
+    vec2 d = vec2(length(p.xz) - o.radius, abs(p.y) - o.height2);
+    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
+}
+);
+
+SDTYPE(Torus,
+{
+    float r1;
+    float r2;
+    Transform t;
+},
+{
+    return length(vec2(length(p.xz) - o.r1, p.y)) - o.r2;
+}
+)
+
 TEMPLATE_UNIFORMS;
 
 float sdScene(vec3 p)
@@ -146,10 +197,14 @@ vec3 raymarch(vec3 p, vec3 ray_dir, float max_dist)
 
 float lightCoef(vec3 pos, vec3 normal, vec3 light_dir)
 {
-    float light = (dot(normal, light_dir) + 1) / 2;
-    if (SHADOWS_ENABLED && (light < 0.5 || raymarch(pos + normal * MIN_HIT_DIST, light_dir, 3 * RENDER_DISTANCE) != INF3))
+    float light = dot(light_dir, normal);
+    if (SHADOWS_ENABLED)
     {
-        light /= 2;
+        vec3 hit_p = raymarch(pos + normal * MIN_HIT_DIST, light_dir, 3 * RENDER_DISTANCE);
+        if (length(hit_p - pos) > MIN_HIT_DIST * 2 && hit_p != INF3)
+        {
+           light /= 2;
+        }
     }
     return light;
 }
@@ -157,7 +212,7 @@ float lightCoef(vec3 pos, vec3 normal, vec3 light_dir)
 vec3 hitColor(vec3 p)
 {
     vec3 normal = normalAtPoint(p);
-    return abs(normal) * lightCoef(p, normal, mainLightDirection());
+    return TEMPLATE_COLOR * lightCoef(p, normal, mainLightDirection());
 }
 
 vec3 rayDirection()

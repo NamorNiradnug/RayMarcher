@@ -5,9 +5,12 @@
     </qresource>
     <qresource prefix="/about">
         <file>README.md</file>
-        <file>ABOUT</file>
+        <file>ABOUT.html</file>
+        <file>LICENSE</file>
     </qresource>
     <qresource prefix="/examples">
-        <file>examples/examplescene.scene</file>
+        <file>examples/cube_sphere_diff.scene</file>
+        <file>examples/spheres_intersection.scene</file>
+        <file>examples/random_example.scene</file>
     </qresource>
 </RCC>

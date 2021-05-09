@@ -1,0 +1,5 @@
+NAME "AABBox and Sphere Difference"
+SDF sph Sphere radius=(1.25 + sin(TIME) / 4)  1.0 0.0 0.0 0.0  0.0 0.0 0.0  1.0
+SDF aabb AABBox rx=1 ry=1 rz=1  0.0 1.0 0.0 TIME  0.0 0.0 0.0  1.0
+SDF sc Difference o1=aabb o2=sph  1.0 0.0 0.0 0.0  0.0 0.0 0.0  1.0
+SCENE sc

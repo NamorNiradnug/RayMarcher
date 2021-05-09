@@ -56,12 +56,22 @@ Lazy *Lazy::abs(Lazy *l)
     return new Abs(l);
 }
 
-typedef quint16 operator_priority;
+Lazy *Lazy::fromString(QByteArray str, const QMap<QByteArray, Lazy *> &variables)
+{
+    str.replace(QChar::Space, "");
+    return fromStringPrivate(str, variables);
+}
 
-int operatorOfExp(const QString &str, const QMap<QChar, operator_priority> &operators)
+using operator_priority = quint16;
+
+int operatorOfExp(const QString &str, const QMap<QChar, operator_priority> &operators_priorities)
 {
     int operator_pos = 0;
     int open_parens = 0;
+    if (str[0] == '(')
+    {
+        ++open_parens;
+    }
     for (int i = 1; i < str.size(); ++i)
     {
         if (str[i] == '(')
@@ -72,8 +82,8 @@ int operatorOfExp(const QString &str, const QMap<QChar, operator_priority> &oper
         {
             --open_parens;
         }
-        else if (operators.contains(str[i]) && open_parens == 0 &&
-                 (operators[str[i]] < operators[str[operator_pos]] || operator_pos == 0))
+        else if (operators_priorities.contains(str[i]) && open_parens == 0 &&
+                 (operators_priorities[str[i]] < operators_priorities[str[operator_pos]] || operator_pos == 0))
         {
             operator_pos = i;
         }
@@ -81,7 +91,7 @@ int operatorOfExp(const QString &str, const QMap<QChar, operator_priority> &oper
     return operator_pos;
 }
 
-Lazy *Lazy::fromString(QByteArray str, const QMap<QByteArray, Lazy *> variables)
+Lazy *Lazy::fromStringPrivate(const QByteArray &str, const QMap<QByteArray, Lazy *> variables)
 {
     static const QMap<QChar, Lazy *(*)(Lazy *, Lazy *)> OPERATORS = {
         {'+', &Lazy::sum},
@@ -102,16 +112,7 @@ Lazy *Lazy::fromString(QByteArray str, const QMap<QByteArray, Lazy *> variables)
     };
     static const QList<QChar> PUNCTUATION_CHARS = OPERATORS.keys() + QList<QChar>({'(', ')'});
 
-    // removing useless parentheses around the expression
-    int starting_parens_numer = 0;
-    while (str[starting_parens_numer] == '(')
-    {
-        ++starting_parens_numer;
-    }
-    str.chop(starting_parens_numer);
-    str.remove(0, starting_parens_numer);
-
-    bool is_number;
+    bool is_number = false;
     qreal number = str.toDouble(&is_number);
     if (is_number)
     {
@@ -126,19 +127,23 @@ Lazy *Lazy::fromString(QByteArray str, const QMap<QByteArray, Lazy *> variables)
     int operator_pos = operatorOfExp(str, PRIORITES);
     if (operator_pos != 0)
     {
-        return OPERATORS[(QChar)str[operator_pos]](Lazy::fromString(str.left(operator_pos), variables),
-                                                   Lazy::fromString(str.mid(operator_pos + 1), variables));
+        return OPERATORS[(QChar)str[operator_pos]](fromStringPrivate(str.left(operator_pos), variables),
+                                                   fromStringPrivate(str.mid(operator_pos + 1), variables));
     }
 
     if (str[0] == '-')
     {
-        return Lazy::fromString(str.mid(1), variables)->neg();
+        return Lazy::fromStringPrivate(str.mid(1), variables)->neg();
     }
 
     if (str.contains('('))
     {
+        if (str[0] == '(')
+        {
+            return fromStringPrivate(str.mid(1).chopped(1), variables);
+        }
         int paren_pos = str.indexOf('(');
-        return FUNCTIONS[str.left(paren_pos)](Lazy::fromString(str.mid(paren_pos + 1).chopped(1), variables));
+        return FUNCTIONS[str.left(paren_pos)](fromStringPrivate(str.mid(paren_pos + 1).chopped(1), variables));
     }
 
     qCritical() << "Cannot initialize `Lazy` from" << str;

@@ -29,7 +29,10 @@ public:
     static Lazy *cos(Lazy *l);
     static Lazy *abs(Lazy *l);
 
-    static Lazy *fromString(QByteArray str, const QMap<QByteArray, Lazy *> variables);
+    static Lazy *fromString(QByteArray str, const QMap<QByteArray, Lazy *> &variables);
+
+private:
+    static Lazy *fromStringPrivate(const QByteArray &str, const QMap<QByteArray, Lazy *> variables);
 };
 
 inline Lazy::Lazy()

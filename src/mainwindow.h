@@ -31,6 +31,7 @@ private slots:
     void toggleMenubar();
     void toggleFullscreen();
     void about();
+    void license();
 
     void toggleShadows();
 
@@ -63,22 +64,22 @@ private:
     QAction *open_act = new QAction(QIcon::fromTheme("document-open"), tr("&Open..."));
     QMenu *open_builtin_menu = new QMenu(tr("Open Built-in Scene..."));
     QMenu *open_recent_menu = new QMenu(tr("Open &Recent"));
-    QAction *reload_act = new QAction(tr("Re&load Current Scene"));
+    QAction *reload_act = new QAction(QIcon::fromTheme("view-refresh"), tr("Re&load Current Scene"));
 
     QAction *open_setting_act = new QAction(tr("&Settings"));
 
-    QAction *quit_act = new QAction(tr("&Quit"));
+    QAction *quit_act = new QAction(QIcon::fromTheme("application-exit"), tr("&Quit"));
 
     QAction *pause_time_act = new QAction(tr("Pause &Time"));
 
     QAction *camera_control_mode_act = new QAction(tr("&Camera Control Mode"));
-    QAction *camera_go_home_act = new QAction(tr("Move Camera to &Zero"));
+    QAction *camera_go_home_act = new QAction(QIcon::fromTheme("go-home"), tr("Move Camera to &Zero"));
 
     QAction *show_menubar_act = new QAction(tr("Show &Menubar"));
-    QAction *show_toolbar_act = new QAction(tr("Show Toolbar..."));
-    QAction *show_fullscreen_act = new QAction(tr("Show &Fullscreen"));
+    QAction *show_fullscreen_act = new QAction(QIcon::fromTheme("view-fullscreen"), tr("Show &Fullscreen"));
 
-    QAction *about_act = new QAction(tr("&About SimpleRayMarcher"));
+    QAction *about_act = new QAction(QIcon::fromTheme("system-help"), tr("&About SimpleRayMarcher"));
+    QAction *license_act = new QAction(QIcon::fromTheme(""), tr("License"));
     QAction *about_qt_act = new QAction(QIcon::fromTheme("qt"), tr("About &Qt..."));
 
     QAction *enable_shadows_act = new QAction(tr("Enable Shadows"));

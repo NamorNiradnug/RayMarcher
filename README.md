@@ -4,5 +4,7 @@ The simple program which renders scenes with raymarching written with Qt.
 
 ## Examples screenshots
 
-Spheres Intersection example.
-![1](screenshots/spheres_intersection.png)
+Cube and sphere difference.
+![1](screenshots/cube_sphere_diff.png)
+Torus.
+![2](screenshots/torus.png)

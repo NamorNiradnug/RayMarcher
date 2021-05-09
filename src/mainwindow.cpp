@@ -57,6 +57,7 @@ MainWindow::MainWindow(QApplication *app, QWidget *parent) : QMainWindow(parent)
 
     help_menu->addActions({
         about_act,
+        license_act,
         about_qt_act,
     });
 
@@ -77,8 +78,8 @@ MainWindow::MainWindow(QApplication *app, QWidget *parent) : QMainWindow(parent)
     enable_shadows_act->setChecked(renderer->properties.is_shadows_enabled);
     raymarching_properties->addAction(enable_shadows_act);
     ADD_SLIDER_PROPERTY("Render Distance", 5, 500, 100, changeRenderDistance, raymarching_properties);
-    ADD_SLIDER_PROPERTY("Max Steps", 10, 1000, 400, changeMaxSteps, raymarching_properties);
-    ADD_SLIDER_PROPERTY("Min Hit Distance", 1, 5000, 100, changeMinHitDistance, raymarching_properties);
+    ADD_SLIDER_PROPERTY("Max Steps", 10, 2000, 1000, changeMaxSteps, raymarching_properties);
+    ADD_SLIDER_PROPERTY("Min Hit Distance", 2, 500, 50, changeMinHitDistance, raymarching_properties);
 
     addToolBar(camera_properties);
     addToolBar(raymarching_properties);
@@ -88,7 +89,6 @@ MainWindow::MainWindow(QApplication *app, QWidget *parent) : QMainWindow(parent)
     open_act->setShortcut(QKeySequence::Open);
     reload_act->setShortcut(QKeySequence::Refresh);
     open_setting_act->setShortcut(QKeySequence::Preferences);
-    show_toolbar_act->setShortcut(Qt::CTRL + Qt::Key_T);
     show_menubar_act->setShortcut(Qt::CTRL + Qt::Key_M);
     show_fullscreen_act->setShortcut(QKeySequence::FullScreen);
     quit_act->setShortcut(QKeySequence::Quit);
@@ -111,6 +111,7 @@ MainWindow::MainWindow(QApplication *app, QWidget *parent) : QMainWindow(parent)
     connect(show_menubar_act, &QAction::toggled, this, &MainWindow::toggleMenubar);
     connect(show_fullscreen_act, &QAction::toggled, this, &MainWindow::toggleFullscreen);
     connect(about_act, &QAction::triggered, this, &MainWindow::about);
+    connect(license_act, &QAction::triggered, this, &MainWindow::license);
     connect(about_qt_act, &QAction::triggered, app, &QApplication::aboutQt);
 
     connect(enable_shadows_act, &QAction::toggled, this, &MainWindow::toggleShadows);
@@ -245,9 +246,21 @@ void MainWindow::toggleFullscreen()
 
 void MainWindow::about()
 {
-    QFile f(":/about/ABOUT");
+    QFile f(":/about/ABOUT.html");
     f.open(QFile::ReadOnly);
-    QMessageBox::about(this, "About RayMarchingWizard", f.readAll());
+    QMessageBox::about(this, "About RayMarcher", f.readAll());
+    f.close();
+}
+
+void MainWindow::license()
+{
+    QFile f(":/about/LICENSE");
+    f.open(QFile::ReadOnly);
+    QByteArray text = f.readAll();
+    text.replace("\n\n", "$$");
+    text.replace("\n", "");
+    text.replace("$$", "\n\n");
+    QMessageBox::about(this, "RayMarcher License", text);
     f.close();
 }
 
@@ -268,7 +281,7 @@ void MainWindow::changeMaxSteps(int slider_value)
 
 void MainWindow::changeMinHitDistance(int slider_value)
 {
-    renderer->properties.min_hit_distance = slider_value / 100000.0;
+    renderer->properties.min_hit_distance = slider_value / 1000000.0;
 }
 
 void MainWindow::changeCameraSpeed(int slider_value)

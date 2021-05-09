@@ -15,9 +15,71 @@ Lazy *Scene::variable(const QByteArray &varname) const
 
 Scene::Scene(QString f) : f(f){};
 
+QByteArrayList split(const QByteArray &line)
+{
+    QByteArrayList splitted;
+    QByteArray cur;
+    int open_paren = 0;
+    QChar opening_quote = QChar::Space;
+    bool is_prev_backslash = false;
+    for (const auto &ch : line)
+    {
+        if (ch == QChar::Space && open_paren == 0 && opening_quote == QChar::Space)
+        {
+            cur.replace(QChar::Space, "");
+            splitted.append(cur);
+            cur.clear();
+        }
+        else if (ch == '"' || ch == '\'')
+        {
+            if (cur.isEmpty())
+            {
+                opening_quote = ch;
+            }
+            else if (!is_prev_backslash && ch == opening_quote)
+            {
+                opening_quote = QChar::Space;
+            }
+            else
+            {
+                cur.append(ch);
+            }
+        }
+        else
+        {
+            if (ch == '(')
+            {
+                ++open_paren;
+            }
+            else if (ch == ')')
+            {
+                open_paren = qMax(--open_paren, 0);
+            }
+            if (ch != '\\' || is_prev_backslash)
+            {
+                cur.append(ch);
+            }
+        }
+        if (ch == '\\' && !is_prev_backslash)
+        {
+            is_prev_backslash = true;
+        }
+        else
+        {
+            is_prev_backslash = false;
+        }
+    }
+    splitted.append(cur);
+
+    return splitted;
+}
+
 void Scene::parse(const QSet<const QByteArray> &cmds)
 {
     QByteArray before_uniforms;
+    QByteArray uniforms;
+    QByteArray sdscene;
+    QByteArray color;
     QFile f(this->f);
     f.open(QFile::ReadOnly);
 
@@ -28,7 +90,7 @@ void Scene::parse(const QSet<const QByteArray> &cmds)
         {
             line = line.left(line.indexOf(COMMENT_SEQ));
         }
-        const QByteArrayList words = line.split(QChar::Space);
+        const QByteArrayList words = split(line);
         if (words.empty())
         {
             continue;
@@ -92,17 +154,19 @@ void Scene::parse(const QSet<const QByteArray> &cmds)
         }
         else if (CHECK_CMD(CMD_NAME))
         {
-            for (int i = 1; i < words.size(); ++i)
-            {
-                name += words[i] + " ";
-            }
-            name.chop(1);
+            name = words[1];
+        }
+        else if (CHECK_CMD(CMD_COLOR_DEF))
+        {
+            macros[COLOR_MACRO] = words[1];
         }
     };
-    uniforms = before_uniforms + uniforms;
-    sdscene += "return sdist(p, " + scene_var + ");\n";
-    uniforms.replace("\n", " \\\n");
-    sdscene.replace("\n", " \\\n");
+    macros[UNIFROMS_MACRO] = before_uniforms + uniforms;
+    macros[SDSCENE_MACRO] = sdscene + "return sdist(p, " + scene_var + ");\n";
+    for (const auto &macro : macros.keys())
+    {
+        macros[macro].replace("\n", " \\\n");
+    }
     f.close();
     if (cmds.isEmpty())
     {
@@ -115,8 +179,10 @@ QByteArray Scene::generateShader() const
     QFile f(TEMPLATE_SHADER_PATH);
     f.open(QFile::ReadOnly);
     QByteArray sources = f.readLine();
-    sources += "#define " + UNIFROMS_MACRO + " \\\n" + uniforms + "\n";
-    sources += "#define " + SDSCENE_MACRO + " \\\n" + sdscene + "\n";
+    for (const auto &macro : macros.keys())
+    {
+        sources += "#define " + macro + " \\\n" + macros[macro] + "\n";
+    }
     sources += f.readAll();
     f.close();
     return sources;

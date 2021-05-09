@@ -1,0 +1,6 @@
+// this is test scene, it changes every commit and can contains some easter eggs :)
+// lines 1 and 2 of the file will be deleted in next commit
+NAME 'it\'s Random Example'
+COLOR vec3(1.0, 0.0, 0.0)
+SDF tr Torus r1=3.0 r2=1.0  sin(TIME) 0.0 cos(TIME) TIME  '7 * sin(TIME / 2)' 0.0 '7 * cos(TIME / 2)'  1.0
+SCENE tr

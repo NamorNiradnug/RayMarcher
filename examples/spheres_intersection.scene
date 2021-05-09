@@ -1,0 +1,5 @@
+NAME "Spheres Intersection"
+SDF s1 Sphere radius=1.5  1.0 0.0 0.0 0.0  -1.0 0.0 0.0  1.0
+SDF s2 Sphere radius=1.0  1.0 0.0 0.0 0.0  0.0 0.0 0.0  1.0
+SDF i1 Intersection o1=s1 o2=s2  0.0 1.0 0.0 TIME  0.0 0.0 0.0  1.0
+SCENE i1
