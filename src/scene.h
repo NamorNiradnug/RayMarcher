@@ -22,22 +22,25 @@ class Scene
 {
 public:
     inline static const QString TEMPLATE_SHADER_PATH = ":/shaders/shaders/raymarcher.frag";
-    inline static const QByteArray TRANSFORM_PREFIX = "__TRANSFORM_";
+    inline static const QByteArray TRANSFORM_PREFIX = "_TRANSFORM_";
+    inline static const QByteArray GENERATED_PREFIX = "__GENERATED_";
     inline static const QByteArray CMD_VAR_DEF = "SDF";
     inline static const QByteArray CMD_SCENE_DEF = "SCENE";
     inline static const QByteArray CMD_NAME = "NAME";
     inline static const QByteArray CMD_COLOR_DEF = "COLOR";
     inline static const QByteArray CMD_LIGHT = "LIGHT";
+    inline static const QByteArray CMD_SDFTYPE = "SDFTYPE";
     inline static const QByteArray COMMENT_SEQ = "//";
-    inline static const QByteArrayList TEMPLATES_TYPES = {"Intersection", "Union", "Difference"};
+    inline static const QByteArrayList TEMPLATES_TYPES = {"Intersection", "Union", "Difference", "SmoothUnion"};
     inline static const QByteArray UNIFROMS_MACRO = "TEMPLATE_UNIFORMS";
     inline static const QByteArray SDSCENE_MACRO = "TEMPLATE_SDSCENE";
     inline static const QByteArray COLOR_MACRO = "TEMPLATE_COLOR";
+    inline static const QByteArray SDFTYPES_MACRO = "TEMPLATE_SDFTYPES";
 
     Lazy *addVariable(const QByteArray &name, Lazy *value);
     Lazy *variable(const QByteArray &varname) const;
 
-    Scene(QString f);
+    Scene(const QString &f);
     void parse(const QSet<const QByteArray> &cmds = {});
     QByteArray generateShader() const;
     void setUniformsValues(QOpenGLShaderProgram *prog) const;
@@ -56,7 +59,7 @@ private:
     QMap<QByteArray, RotationSource> rotations;
 
     bool parsed = false;
-    QMap<QByteArray, QByteArray> macros = {{COLOR_MACRO, "vec3(1.0,1.0,1.0)"}};
+    QMap<QByteArray, QByteArray> macros;
     QByteArray scene_var;
     QByteArray name;
 };

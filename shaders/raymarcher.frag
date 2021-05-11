@@ -12,6 +12,10 @@
 #define TEMPLATE_COLOR vec3(1, 1, 1)
 #endif
 
+#ifndef TEMPLATE_SDFTYPES
+#define TEMPLATE_SDFTYPES
+#endif
+
 vec3 rotated(vec3 p, vec4 q)
 {
     return p + 2.0 * cross(q.xyz, cross(q.xyz, p) + q.w * p);
@@ -58,7 +62,7 @@ vec3 rotated(vec3 p, vec4 q)
         return max(sdist(p, o.o1), -sdist(p, o.o2)); \
     });
 
-varying vec2 uv;
+in vec2 uv;
 
 out vec4 fragColor;
 
@@ -157,7 +161,9 @@ SDTYPE(Torus,
 {
     return length(vec2(length(p.xz) - o.r1, p.y)) - o.r2;
 }
-)
+);
+
+TEMPLATE_SDFTYPES;
 
 TEMPLATE_UNIFORMS;
 

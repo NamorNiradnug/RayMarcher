@@ -1,6 +1,7 @@
-attribute vec4 attr_pos;
+#version 440
 
-varying vec2 uv;
+in vec4 attr_pos;
+out vec2 uv;
 
 void main()
 {

@@ -13,7 +13,7 @@ Lazy *Scene::variable(const QByteArray &varname) const
     return variables[varname];
 }
 
-Scene::Scene(QString f) : f(f){};
+Scene::Scene(const QString &f) : f(f){};
 
 QByteArrayList split(const QByteArray &line)
 {
@@ -60,14 +60,7 @@ QByteArrayList split(const QByteArray &line)
                 cur.append(ch);
             }
         }
-        if (ch == '\\' && !is_prev_backslash)
-        {
-            is_prev_backslash = true;
-        }
-        else
-        {
-            is_prev_backslash = false;
-        }
+        is_prev_backslash = (ch == '\\' && !is_prev_backslash);
     }
     splitted.append(cur);
 
@@ -122,22 +115,22 @@ void Scene::parse(const QSet<const QByteArray> &cmds)
                                            ");\n"); // creates template type as INTERSECTION(...)
                 }
                 vartypes.insert(varname, vartype + vartypes[params["o1"]] + vartypes[params["o2"]]);
-                uniforms.append("uniform Transform " + TRANSFORM_PREFIX + varname + ";\n");
-                sdscene.append(vartypes[varname] + " " + varname + " = " + vartypes[varname] + "(" + params["o1"] +
-                               ", " + params["o2"] + ", " + TRANSFORM_PREFIX + varname + ");\n");
+                uniforms.append("uniform Transform " + GENERATED_PREFIX + TRANSFORM_PREFIX + varname + ";\n");
+                sdscene.append(vartypes[varname] + " " + GENERATED_PREFIX + varname + " = " + vartypes[varname] + "(" +
+                               GENERATED_PREFIX + params["o1"] + ", " + GENERATED_PREFIX + params["o2"] + ", " +
+                               GENERATED_PREFIX + TRANSFORM_PREFIX + varname + ");\n");
                 transform_uniform_name = TRANSFORM_PREFIX + varname;
             }
             else
             {
                 vartypes.insert(varname, vartype);
-                uniforms.append("uniform " + vartypes[varname] + " " + varname + ";\n");
+                uniforms.append("uniform " + vartypes[varname] + " " + GENERATED_PREFIX + varname + ";\n");
                 for (const QByteArray &param : params.keys())
                 {
                     params_values.insert(varname + "." + param, Lazy::fromString(params[param], variables));
                 }
                 transform_uniform_name = varname + ".t";
             }
-
             rotations.insert(transform_uniform_name + ".rotation", {Lazy::fromString(words[read_words++], variables),
                                                                     Lazy::fromString(words[read_words++], variables),
                                                                     Lazy::fromString(words[read_words++], variables),
@@ -160,9 +153,22 @@ void Scene::parse(const QSet<const QByteArray> &cmds)
         {
             macros[COLOR_MACRO] = words[1];
         }
+        else if (CHECK_CMD(CMD_SDFTYPE))
+        {
+            macros[SDFTYPES_MACRO].append("SDTYPE(" + words[1] + ",\n{\n");
+            int pos = 2;
+            for (; words[pos][0] != '{'; ++pos)
+            {
+                macros[SDFTYPES_MACRO].append("    float " + words[pos] + ";\n");
+            }
+            macros[SDFTYPES_MACRO].append("    Transform t;\n},\n" + words[pos] + "\n);\n");
+        }
     };
+
+#undef CHECK_CMD
+
     macros[UNIFROMS_MACRO] = before_uniforms + uniforms;
-    macros[SDSCENE_MACRO] = sdscene + "return sdist(p, " + scene_var + ");\n";
+    macros[SDSCENE_MACRO] = sdscene + "return sdist(p, " + GENERATED_PREFIX + scene_var + ");\n";
     for (const auto &macro : macros.keys())
     {
         macros[macro].replace("\n", " \\\n");
@@ -185,6 +191,7 @@ QByteArray Scene::generateShader() const
     }
     sources += f.readAll();
     f.close();
+    qDebug().noquote().nospace() << sources;
     return sources;
 }
 
@@ -203,15 +210,15 @@ void Scene::setUniformsValues(QOpenGLShaderProgram *prog) const
 {
     for (const auto &param : params_values.keys())
     {
-        prog->setUniformValue(param.constData(), (GLfloat)params_values[param]->value());
+        prog->setUniformValue((GENERATED_PREFIX + param).constData(), (GLfloat)params_values[param]->value());
     }
     for (const auto &rot : rotations.keys())
     {
-        prog->setUniformValue(rot.constData(), rotation(rotations[rot]));
+        prog->setUniformValue((GENERATED_PREFIX + rot).constData(), rotation(rotations[rot]));
     }
     for (const auto &tr : translations.keys())
     {
-        prog->setUniformValue(tr.constData(), vec3(translations[tr]));
+        prog->setUniformValue((GENERATED_PREFIX + tr).constData(), vec3(translations[tr]));
     }
 }
 

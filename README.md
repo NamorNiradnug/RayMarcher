@@ -1,10 +1,15 @@
 # RayMarcher
-
-The simple program which renders scenes with raymarching written with Qt.
-
+The simple program which renders scenes with ray marching written with [Qt](https://www.qt.io).
 ## Examples screenshots
-
 Cube and sphere difference.
 ![1](screenshots/cube_sphere_diff.png)
 Torus.
 ![2](screenshots/torus.png)
+## TODO
+ - Storing scenes in XML
+ - More properties in *.scene
+    - Lighting
+    - Camera position
+    - Variables
+ - Scene editor
+ - Custom SDFs
