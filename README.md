@@ -5,6 +5,10 @@ Cube and sphere difference.
 ![1](screenshots/cube_sphere_diff.png)
 Torus.
 ![2](screenshots/torus.png)
+"Smooth union".
+![3](screenshots/smooth.png)
+Infinite spheres world.
+![4](screenshots/inf.png)
 ## TODO
  - Storing scenes in XML
  - More properties in *.scene
@@ -12,4 +16,4 @@ Torus.
     - Camera position
     - Variables
  - Scene editor
- - Custom SDFs
+ - Custom SDFs (better)

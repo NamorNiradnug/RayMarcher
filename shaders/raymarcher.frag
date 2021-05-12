@@ -8,10 +8,6 @@
 #define TEMPLATE_SDSCENE return INF;
 #endif
 
-#ifndef TEMPLATE_COLOR
-#define TEMPLATE_COLOR vec3(1, 1, 1)
-#endif
-
 #ifndef TEMPLATE_SDFTYPES
 #define TEMPLATE_SDFTYPES
 #endif
@@ -62,6 +58,18 @@ vec3 rotated(vec3 p, vec4 q)
         return max(sdist(p, o.o1), -sdist(p, o.o2)); \
     });
 
+#define SMOOTHUNION(type1, type2) \
+    SDTYPE(SmoothUnion##type1##type2, \
+    { \
+        type1 o1; \
+        type2 o2; \
+        float k; \
+        Transform t; \
+    }, \
+    { \
+        return smin(sdist(p, o.o1), sdist(p, o.o2), o.k); \
+    });
+
 in vec2 uv;
 
 out vec4 fragColor;
@@ -87,6 +95,12 @@ uniform struct Camera
     float fov2_tan;
 } camera;
 
+uniform struct Sun
+{
+    vec3 dir;
+    vec3 color;
+} sun;
+
 struct Transform
 {
     vec4 rotation;
@@ -100,11 +114,6 @@ float smin(float a, float b, float k)
 {
     float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
     return mix(b, a, h) - k * h * (1.0 - h);
-}
-
-vec3 mainLightDirection()
-{
-    return normalize(vec3(sin(TIME * 0.2), (sin(TIME * 0.1) / 2 + 0.75), cos(TIME * 0.2)));
 }
 
 SDTYPE(Sphere,
@@ -201,12 +210,12 @@ vec3 raymarch(vec3 p, vec3 ray_dir, float max_dist)
     return INF3;
 }
 
-float lightCoef(vec3 pos, vec3 normal, vec3 light_dir)
+float lightCoef(vec3 pos, vec3 normal)
 {
-    float light = dot(light_dir, normal);
+    float light = dot(sun.dir, normal);
     if (SHADOWS_ENABLED)
     {
-        vec3 hit_p = raymarch(pos + normal * MIN_HIT_DIST, light_dir, 3 * RENDER_DISTANCE);
+        vec3 hit_p = raymarch(pos + normal * MIN_HIT_DIST, sun.dir, 3 * RENDER_DISTANCE);
         if (length(hit_p - pos) > MIN_HIT_DIST * 2 && hit_p != INF3)
         {
            light /= 2;
@@ -218,7 +227,7 @@ float lightCoef(vec3 pos, vec3 normal, vec3 light_dir)
 vec3 hitColor(vec3 p)
 {
     vec3 normal = normalAtPoint(p);
-    return TEMPLATE_COLOR * lightCoef(p, normal, mainLightDirection());
+    return sun.color * lightCoef(p, normal);
 }
 
 vec3 rayDirection()
@@ -233,7 +242,7 @@ vec3 rayDirection()
 
 vec3 skyColor(vec3 direction)
 {
-    float light_dot = dot(direction, mainLightDirection());
+    float light_dot = dot(direction, sun.dir);
     if (light_dot > 0.995)
     {
         return vec3(1, 1, 1);

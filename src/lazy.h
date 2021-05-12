@@ -1,5 +1,7 @@
 #pragma once
 #include <QMap>
+#include <QVector2D>
+#include <QVector3D>
 #include <QtMath>
 
 #define OPERATOR(name)                                                                                                 \
@@ -33,6 +35,24 @@ public:
 
 private:
     static Lazy *fromStringPrivate(const QByteArray &str, const QMap<QByteArray, Lazy *> variables);
+};
+
+struct Lazy2D
+{
+    Lazy *x, *y;
+    inline QVector2D value() const
+    {
+        return QVector2D(x->value(), y->value());
+    };
+};
+
+struct Lazy3D
+{
+    Lazy *x, *y, *z;
+    inline QVector3D value() const
+    {
+        return QVector3D(x->value(), y->value(), z->value());
+    };
 };
 
 inline Lazy::Lazy()

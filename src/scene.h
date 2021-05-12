@@ -7,15 +7,12 @@
 
 struct RotationSource
 {
-    Lazy *x;
-    Lazy *y;
-    Lazy *z;
-    Lazy *angle;
-};
-
-struct LazyVector3D
-{
-    Lazy *x, *y, *z;
+    Lazy *x, *y, *z, *angle;
+    inline QVector4D value() const
+    {
+        return QVector4D(
+            QVector4D(Lazy3D{x, y, z}.value().normalized() * qSin(angle->value() / 2), qCos(angle->value() / 2)));
+    };
 };
 
 class Scene
@@ -28,13 +25,13 @@ public:
     inline static const QByteArray CMD_SCENE_DEF = "SCENE";
     inline static const QByteArray CMD_NAME = "NAME";
     inline static const QByteArray CMD_COLOR_DEF = "COLOR";
-    inline static const QByteArray CMD_LIGHT = "LIGHT";
+    inline static const QByteArray CMD_SUN = "SUN";
     inline static const QByteArray CMD_SDFTYPE = "SDFTYPE";
     inline static const QByteArray COMMENT_SEQ = "//";
-    inline static const QByteArrayList TEMPLATES_TYPES = {"Intersection", "Union", "Difference", "SmoothUnion"};
+    inline static const QMap<QByteArray, QList<QByteArray>> TEMPLATES_TYPES = {
+        {"Intersection", {}}, {"Union", {}}, {"Difference", {}}, {"SmoothUnion", {"k"}}};
     inline static const QByteArray UNIFROMS_MACRO = "TEMPLATE_UNIFORMS";
     inline static const QByteArray SDSCENE_MACRO = "TEMPLATE_SDSCENE";
-    inline static const QByteArray COLOR_MACRO = "TEMPLATE_COLOR";
     inline static const QByteArray SDFTYPES_MACRO = "TEMPLATE_SDFTYPES";
 
     Lazy *addVariable(const QByteArray &name, Lazy *value);
@@ -52,11 +49,14 @@ public:
 private:
     QString f;
 
-    QMap<QByteArray, Lazy *> variables;
+    QMap<QByteArray, Lazy *> variables = {{"PI", Lazy::number(M_PI)}};
     QMap<QByteArray, Lazy *> params_values;
-    QMap<QByteArray, LazyVector3D> translations;
-    QMap<QByteArray, QByteArray> vartypes;
+    QMap<QByteArray, Lazy3D> params3d_values = {
+        {"sun.color", {Lazy::number(1.0), Lazy::number(1.0), Lazy::number(1.0)}}};
+    QMap<QByteArray, Lazy3D> normal_params3d_values = {
+        {"sun.dir", {Lazy::number(1.0), Lazy::number(1.0), Lazy::number(1.0)}}};
     QMap<QByteArray, RotationSource> rotations;
+    QMap<QByteArray, QByteArray> vartypes;
 
     bool parsed = false;
     QMap<QByteArray, QByteArray> macros;

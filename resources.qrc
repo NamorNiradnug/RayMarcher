@@ -12,5 +12,6 @@
         <file>examples/cube_sphere_diff.scene</file>
         <file>examples/spheres_intersection.scene</file>
         <file>examples/random_example.scene</file>
+        <file>examples/smooth_union.scene</file>
     </qresource>
 </RCC>

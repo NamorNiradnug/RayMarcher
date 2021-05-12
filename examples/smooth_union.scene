@@ -1,0 +1,5 @@
+NAME "Smooth Union"
+SDF cld Cylinder radius=0.5 height2=1.5  1.0 0.0 0.0 PI/2  0.0 0.0 0.0  1.0
+SDF sph Sphere radius=0.3  1.0 0.0 0.0 0.0  sin(TIME)*2 0.0 0.2  1.0
+SDF sc SmoothUnion o1=cld o2=sph k=1.0  1.0 0.0 0.0 0.0  0.0 0.0 0.0  1.0
+SCENE sc
