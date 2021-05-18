@@ -30,7 +30,7 @@ public:
     inline static const QByteArray COMMENT_SEQ = "//";
     inline static const QMap<QByteArray, QList<QByteArray>> TEMPLATES_TYPES = {
         {"Intersection", {}}, {"Union", {}}, {"Difference", {}}, {"SmoothUnion", {"k"}}};
-    inline static const QByteArray UNIFROMS_MACRO = "TEMPLATE_UNIFORMS";
+    inline static const QByteArray UNIFORMS_MACRO = "TEMPLATE_UNIFORMS";
     inline static const QByteArray SDSCENE_MACRO = "TEMPLATE_SDSCENE";
     inline static const QByteArray SDFTYPES_MACRO = "TEMPLATE_SDFTYPES";
 

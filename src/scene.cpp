@@ -67,10 +67,6 @@ QByteArrayList split(const QByteArray &line)
 
 void Scene::parse(const QSet<const QByteArray> &cmds)
 {
-    QByteArray before_uniforms;
-    QByteArray uniforms;
-    QByteArray sdscene;
-    QByteArray color;
     QFile f(this->f);
     f.open(QFile::ReadOnly);
 
@@ -114,25 +110,28 @@ void Scene::parse(const QSet<const QByteArray> &cmds)
             {
                 if (!vartypes.values().contains(vartypes[varname]))
                 {
-                    before_uniforms.append(vartype.toUpper() + "(" + vartypes[params["o1"]] + ", " +
-                                           vartypes[params["o2"]] +
-                                           ");\n"); // creates template type as INTERSECTION(...)
+                    macros[SDFTYPES_MACRO].append(vartype.toUpper() + "(" + vartypes[params["o1"]] + ", " +
+                                                  vartypes[params["o2"]] +
+                                                  ");\n"); // creates template type as INTERSECTION(...)
                 }
                 vartypes.insert(varname, vartype + vartypes[params["o1"]] + vartypes[params["o2"]]);
-                uniforms.append("uniform Transform " + GENERATED_PREFIX + TRANSFORM_PREFIX + varname + ";\n");
-                sdscene.append(vartypes[varname] + " " + GENERATED_PREFIX + varname + " = " + vartypes[varname] + "(" +
-                               GENERATED_PREFIX + params["o1"] + ", " + GENERATED_PREFIX + params["o2"] + ", ");
+                macros[UNIFORMS_MACRO].append("uniform Transform " + GENERATED_PREFIX + TRANSFORM_PREFIX + varname +
+                                              ";\n");
+                macros[SDSCENE_MACRO].append(vartypes[varname] + " " + GENERATED_PREFIX + varname + " = " +
+                                             vartypes[varname] + "(" + GENERATED_PREFIX + params["o1"] + ", " +
+                                             GENERATED_PREFIX + params["o2"] + ", ");
                 for (const auto &p : TEMPLATES_TYPES[vartype])
                 {
-                    sdscene += params.value(p, "0.0") + ", ";
+                    macros[SDSCENE_MACRO] += params.value(p, "0.0") + ", ";
                 }
-                sdscene.append(GENERATED_PREFIX + TRANSFORM_PREFIX + varname + ");\n");
+                macros[SDSCENE_MACRO].append(GENERATED_PREFIX + TRANSFORM_PREFIX + varname + ");\n");
                 transform_uniform_name = TRANSFORM_PREFIX + varname;
             }
             else
             {
                 vartypes.insert(varname, vartype);
-                uniforms.append("uniform " + vartypes[varname] + " " + GENERATED_PREFIX + varname + ";\n");
+                macros[UNIFORMS_MACRO].append("uniform " + vartypes[varname] + " " + GENERATED_PREFIX + varname +
+                                              ";\n");
                 for (const QByteArray &param : params.keys())
                 {
                     params_values.insert(GENERATED_PREFIX + varname + "." + param,
@@ -185,8 +184,7 @@ void Scene::parse(const QSet<const QByteArray> &cmds)
 
 #undef CHECK_CMD
 
-    macros[UNIFROMS_MACRO] = before_uniforms + uniforms;
-    macros[SDSCENE_MACRO] = sdscene + "return sdist(p, " + GENERATED_PREFIX + scene_var + ");\n";
+    macros[SDSCENE_MACRO] += "return sdist(p, " + GENERATED_PREFIX + scene_var + ");\n";
     for (const auto &macro : macros.keys())
     {
         macros[macro].replace("\n", " \\\n");

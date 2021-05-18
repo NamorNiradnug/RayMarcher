@@ -10,10 +10,13 @@ Torus.
 Infinite spheres world.
 ![4](screenshots/inf.png)
 ## TODO
+ - Much better *.scene
+ - Nice errors while scene processing instead of crashing
  - Storing scenes in XML
+ - Python library
  - More properties in *.scene
     - Lighting
     - Camera position
     - Variables
- - Scene editor
- - Custom SDFs (better)
+ - Scenes editor
+ - Smooth shadows

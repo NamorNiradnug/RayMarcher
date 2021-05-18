@@ -226,8 +226,8 @@ float lightCoef(vec3 pos, vec3 normal)
 
 vec3 hitColor(vec3 p)
 {
-    vec3 normal = normalAtPoint(p);
-    return sun.color * lightCoef(p, normal);
+    vec3 n = normalAtPoint(p);
+    return sun.color * lightCoef(p, n);
 }
 
 vec3 rayDirection()
