@@ -108,13 +108,14 @@ void Scene::parse(const QSet<const QByteArray> &cmds)
             QByteArray transform_uniform_name;
             if (TEMPLATES_TYPES.contains(vartype))
             {
-                if (!vartypes.values().contains(vartypes[varname]))
+                const QByteArray new_var_type = vartype + vartypes[params["o1"]] + vartypes[params["o2"]];
+                if (!vartypes.values().contains(new_var_type))
                 {
                     macros[SDFTYPES_MACRO].append(vartype.toUpper() + "(" + vartypes[params["o1"]] + ", " +
                                                   vartypes[params["o2"]] +
                                                   ");\n"); // creates template type as INTERSECTION(...)
                 }
-                vartypes.insert(varname, vartype + vartypes[params["o1"]] + vartypes[params["o2"]]);
+                vartypes.insert(varname, new_var_type);
                 macros[UNIFORMS_MACRO].append("uniform Transform " + GENERATED_PREFIX + TRANSFORM_PREFIX + varname +
                                               ";\n");
                 macros[SDSCENE_MACRO].append(vartypes[varname] + " " + GENERATED_PREFIX + varname + " = " +
