@@ -1,8 +1,8 @@
 # RayMarcher
 The simple program which uses single fragment shader with ray marching written with [Qt](https://www.qt.io).
-It uses [raymarching.py](https://github.com/NamorNiradnug/raymarching.py).
-## Installation
-RayMarcher requires `make`, `cmake` and `qt6` for compiling.
+Using [raymarching.py](https://github.com/NamorNiradnug/raymarching.py) is recommended for writing scenes for RayMarcher.
+## Building and running
+RayMarcher requires `make`, `cmake` and `qt5` for compiling and `python3` for running.
 ## Examples screenshots
 Cube and sphere difference.
 ![1](screenshots/cube_sphere_diff.png)
@@ -14,8 +14,8 @@ Infinite spheres world.
 ![4](screenshots/inf.png)
 Random example contains scene which usually demonstraits new features.
 ## TODO
- - More properties in Scene
+ - More properties in scene
     - Lighting
     - Camera position
-    - Variables
+    - Variables & functions
  - Smooth shadows
