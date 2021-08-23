@@ -5,9 +5,11 @@
 #include <QFile>
 #include <QMainWindow>
 #include <QMenu>
+#include <QMessageBox>
 #include <QSlider>
 #include <QToolBar>
 
+class QProcess;
 class QFormLayout;
 
 class MainWindow : public QMainWindow
@@ -15,19 +17,15 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QApplication *app, QWidget *parent = nullptr);
-    void openScene(const QString &f);
+    MainWindow(QWidget *parent = nullptr);
+    void openScene(const QString &path);
 
 private slots:
     void updateOpenRecentMenu();
 
-    void open();
-    void openByTriggeredAction();
-    void reload();
+    void openSceneDialog();
+    void openSceneByTriggeredAction();
     void openSetting();
-    void toggleTimeRunning();
-    void toggleCameraControlMode();
-    void moveCameraHome();
     void toggleMenubar();
     void toggleFullscreen();
     void about();
@@ -45,14 +43,22 @@ private slots:
 
 private:
     static QWidget *sliderWithLabel(const QString &str, QSlider *slider);
-
     static QAction *prettyOpenFileAction(const QString &file, bool add_suffix = false);
-    static void setDisabledWithActions(QMenu *menu, bool value);
+    static void disableMenuWithActions(QMenu *menu, bool is_disabled = true);
+
+    void afterSceneProcessingFinished(QProcess *python, const QString &path);
+
     void createOpenBuiltinMenu();
+
+    inline bool checkOpeningFileExists(const QString &path);
 
     ShaderRenderer *renderer;
     QString current_scene;
+    QProcess *scene_processor = nullptr;
+    QMessageBox *info_box = new QMessageBox(QMessageBox::Information, tr("RayMarcher - status"), "",
+                                            QMessageBox::Ok | QMessageBox::Close, this);
 
+    // UI variables
     QToolBar *raymarching_properties = new QToolBar(tr("RayMarching"), this);
     QToolBar *camera_properties = new QToolBar(tr("Camera"), this);
 
@@ -84,3 +90,14 @@ private:
 
     QAction *enable_shadows_act = new QAction(tr("Enable Shadows"));
 };
+
+inline bool MainWindow::checkOpeningFileExists(const QString &path)
+{
+    if (!QFile::exists(path))
+    {
+        QMessageBox::warning(this, tr("File Not Found"), tr("File at '") + path + "' cannot be found!");
+        renderer->setFragmentShader();
+        return false;
+    }
+    return true;
+}

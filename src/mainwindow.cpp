@@ -3,13 +3,13 @@
 #include <QApplication>
 #include <QFileDialog>
 #include <QFormLayout>
-#include <QGridLayout>
-#include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QProcess>
 #include <QSettings>
+#include <QTemporaryFile>
 
-MainWindow::MainWindow(QApplication *app, QWidget *parent) : QMainWindow(parent)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     resize(640, 480);
 
@@ -40,7 +40,7 @@ MainWindow::MainWindow(QApplication *app, QWidget *parent) : QMainWindow(parent)
         camera_control_mode_act,
         camera_go_home_act,
     });
-    setDisabledWithActions(control_menu, true);
+    disableMenuWithActions(control_menu, true);
 
     show_menubar_act->setCheckable(true);
     show_menubar_act->setChecked(true);
@@ -89,9 +89,10 @@ MainWindow::MainWindow(QApplication *app, QWidget *parent) : QMainWindow(parent)
     open_act->setShortcut(QKeySequence::Open);
     reload_act->setShortcut(QKeySequence::Refresh);
     open_setting_act->setShortcut(QKeySequence::Preferences);
-    show_menubar_act->setShortcut(Qt::CTRL + Qt::Key_M);
-    show_fullscreen_act->setShortcut(QKeySequence::FullScreen);
     quit_act->setShortcut(QKeySequence::Quit);
+
+    show_menubar_act->setShortcut(Qt::CTRL | Qt::Key_M);
+    show_fullscreen_act->setShortcut(QKeySequence::FullScreen);
 
     pause_time_act->setShortcut(Qt::Key_T);
     camera_control_mode_act->setShortcut(Qt::Key_Escape);
@@ -101,78 +102,78 @@ MainWindow::MainWindow(QApplication *app, QWidget *parent) : QMainWindow(parent)
 
     connect(file_menu, &QMenu::aboutToShow, this, &MainWindow::updateOpenRecentMenu);
 
-    connect(open_act, &QAction::triggered, this, &MainWindow::open);
-    connect(reload_act, &QAction::triggered, this, &MainWindow::reload);
+    connect(open_act, &QAction::triggered, this, &MainWindow::openSceneDialog);
+    connect(reload_act, &QAction::triggered, [=] { openScene(current_scene); });
     connect(open_setting_act, &QAction::triggered, this, &MainWindow::openSetting);
     connect(quit_act, &QAction::triggered, this, &MainWindow::close);
-    connect(pause_time_act, &QAction::triggered, this, &MainWindow::toggleTimeRunning);
-    connect(camera_control_mode_act, &QAction::toggled, this, &MainWindow::toggleCameraControlMode);
-    connect(camera_go_home_act, &QAction::triggered, this, &MainWindow::moveCameraHome);
+    connect(pause_time_act, &QAction::toggled, [=] { renderer->is_time_running = !pause_time_act->isChecked(); });
+    connect(camera_control_mode_act, &QAction::toggled,
+            [=] { renderer->setCameraControlMode(camera_control_mode_act->isChecked()); });
+    connect(camera_go_home_act, &QAction::triggered, [=] { renderer->camera.position = QVector3D(); });
     connect(show_menubar_act, &QAction::toggled, this, &MainWindow::toggleMenubar);
     connect(show_fullscreen_act, &QAction::toggled, this, &MainWindow::toggleFullscreen);
     connect(about_act, &QAction::triggered, this, &MainWindow::about);
     connect(license_act, &QAction::triggered, this, &MainWindow::license);
-    connect(about_qt_act, &QAction::triggered, app, &QApplication::aboutQt);
+    connect(about_qt_act, &QAction::triggered, QApplication::instance(), &QApplication::aboutQt);
 
-    connect(enable_shadows_act, &QAction::toggled, this, &MainWindow::toggleShadows);
+    connect(enable_shadows_act, &QAction::toggled,
+            [=] { renderer->properties.is_shadows_enabled = enable_shadows_act->isChecked(); });
 }
 
-void MainWindow::open()
+void MainWindow::openScene(const QString &path)
 {
-    openScene(QFileDialog::getOpenFileName(this, tr("Choose scene"), QDir::homePath()));
-}
-
-void MainWindow::openByTriggeredAction()
-{
-    QAction *triggerer = qobject_cast<QAction *>(sender());
-    if (triggerer != nullptr)
+    if (checkOpeningFileExists(path))
     {
-        openScene(triggerer->property("scene_file_name").toString());
-    }
-}
-
-void MainWindow::openScene(const QString &f)
-{
-    if (!f.isEmpty())
-    {
-        QSettings settings;
-        QStringList updated_history = settings.value("history").toStringList();
-        updated_history.removeAll(f);
-        updated_history.append(f);
-        settings.setValue("history", updated_history);
-        if (!QFile(f).exists())
+        current_scene = path;
         {
-            QMessageBox::critical(this, tr("File not found"), tr("File at ") + f + tr(" not found"));
+            // add opening file to history
+            QSettings settings;
+            QStringList updated_history = settings.value("history").toStringList();
+            updated_history.removeAll(path);
+            updated_history.append(path);
+            settings.setValue("history", updated_history);
         }
-        current_scene = f;
-        renderer->setScene(current_scene);
-        setDisabledWithActions(control_menu, !renderer->program->isLinked());
-        if (!renderer->program->isLinked())
+        QString running_file_path;
         {
-            QMessageBox::critical(this, tr("Bad Scene"), tr("Scene at ") + f + tr(" contains errors."));
+            auto *temp_file = QTemporaryFile::createNativeFile(path);
+            if (temp_file == nullptr)
+            {
+                running_file_path = path;
+            }
+            else
+            {
+                running_file_path = temp_file->fileName();
+            }
         }
-        if (!renderer->scene.getName().isEmpty())
+        QString python_cmd = "python3";
+        if (scene_processor != nullptr)
         {
-            setWindowTitle("RayMarcher - " + renderer->scene.getName());
+            info_box->setText(tr("Aborting previous scene processing..."));
+            info_box->show();
+            scene_processor->disconnect();
+            scene_processor->kill();
         }
-        else
-        {
-            setWindowTitle("RayMarcher - " + renderer->scene.getFile());
-        }
+        info_box->setText(tr("Processing scene..."));
+        info_box->show();
+        scene_processor = new QProcess(this);
+        connect(scene_processor, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
+                [=] { afterSceneProcessingFinished(scene_processor, path); });
+        auto command = python_cmd + " " + running_file_path;
+        qDebug() << "Running" << command;
+        scene_processor->start(command);
     }
 }
 
 void MainWindow::updateOpenRecentMenu()
 {
     open_recent_menu->clear();
-
     QSettings settings;
     QStringList history = settings.value("history").toStringList();
     QList<QAction *> recent_files;
     for (int i = 0; i < settings.value("max_recent", 5).toInt() && i < history.size(); ++i)
     {
-        recent_files.append(prettyOpenFileAction(history[history.size() - i - 1], true));
-        connect(recent_files.back(), &QAction::triggered, this, &MainWindow::openByTriggeredAction);
+        recent_files.append(prettyOpenFileAction(history[i], true));
+        connect(recent_files.back(), &QAction::triggered, this, &MainWindow::openSceneByTriggeredAction);
         recent_files.back()->setDisabled(!QFile(recent_files.back()->property("scene_file_name").toString()).exists());
     }
 
@@ -182,40 +183,38 @@ void MainWindow::updateOpenRecentMenu()
 
 void MainWindow::createOpenBuiltinMenu()
 {
-    QDir examples(":/examples/examples");
+    QDir examples(":/examples");
     QList<QAction *> scene_actions;
-    for (const QString &scene : examples.entryList(QDir::Files))
+    for (const QString &scene: examples.entryList(QDir::Files))
     {
         qDebug() << "Built-in scene" << scene << "found.";
         scene_actions.append(prettyOpenFileAction(examples.filePath(scene)));
-        connect(scene_actions.back(), &QAction::triggered, this, &MainWindow::openByTriggeredAction);
+        connect(scene_actions.back(), &QAction::triggered, this, &MainWindow::openSceneByTriggeredAction);
     }
     open_builtin_menu->addActions(scene_actions);
 }
 
-void MainWindow::reload()
+void MainWindow::openSceneDialog()
 {
-    openScene(current_scene);
+    auto path = QFileDialog::getOpenFileName(this, tr("Choose Scene"), QDir::homePath(), "text/x-python3");
+    // checking that some file has been chosen (QFileDialog::getOpenFileName returns empty string when no file selects)
+    if (!path.isEmpty())
+    {
+        openScene(path);
+    }
+}
+
+void MainWindow::openSceneByTriggeredAction()
+{
+    auto *triggerer = qobject_cast<QAction *>(sender());
+    if (triggerer != nullptr)
+    {
+        openScene(triggerer->property("scene_file_name").toString());
+    }
 }
 
 void MainWindow::openSetting()
 {
-}
-
-void MainWindow::toggleTimeRunning()
-{
-    renderer->is_time_running = !pause_time_act->isChecked();
-}
-
-void MainWindow::toggleCameraControlMode()
-{
-    renderer->setCameraControlMode(camera_control_mode_act->isChecked());
-}
-
-void MainWindow::moveCameraHome()
-{
-    renderer->camera.position = QVector3D();
-    renderer->update();
 }
 
 void MainWindow::toggleMenubar()
@@ -248,7 +247,7 @@ void MainWindow::about()
 {
     QFile f(":/about/ABOUT.html");
     f.open(QFile::ReadOnly);
-    QMessageBox::about(this, "About RayMarcher", f.readAll());
+    QMessageBox::about(this, tr("About RayMarcher"), f.readAll());
     f.close();
 }
 
@@ -260,13 +259,12 @@ void MainWindow::license()
     text.replace("\n\n", "$$");
     text.replace("\n", "");
     text.replace("$$", "\n\n");
-    QMessageBox::about(this, "RayMarcher License", text);
+    QMessageBox::about(this, tr("RayMarcher License"), text);
     f.close();
 }
 
 void MainWindow::toggleShadows()
 {
-    renderer->properties.is_shadows_enabled = enable_shadows_act->isChecked();
 }
 
 void MainWindow::changeRenderDistance(int slider_value)
@@ -299,6 +297,37 @@ void MainWindow::changeCameraRotationSensitivity(int slider_value)
     renderer->camera.rotation_sensitivity = slider_value / 100.0;
 }
 
+void MainWindow::afterSceneProcessingFinished(QProcess *python, const QString &path)
+{
+    info_box->hide();
+    auto error = python->readAllStandardError();
+    auto output = python->readAllStandardOutput();
+    qDebug().nospace() << "Scene processing finished with code " << python->exitCode() << ".";
+    qDebug().noquote().nospace() << "Standart error:\n" << error;
+    qDebug().noquote().nospace() << "Standart output:\n" << output;
+    if (python->exitCode() != 0)
+    {
+        auto *scene_processing_error =
+            new QMessageBox(QMessageBox::Warning, tr("Scene Processing Error"),
+                            tr("Error while processing scene at ") + path + ".", QMessageBox::Ok, this);
+        scene_processing_error->setDetailedText(error);
+        scene_processing_error->show();
+        renderer->setFragmentShader();
+        return;
+    }
+    renderer->setFragmentShader(output);
+    disableMenuWithActions(control_menu, !renderer->frag_shader->isCompiled());
+    if (!renderer->frag_shader->isCompiled())
+    {
+        auto *bad_shader_error =
+            new QMessageBox(QMessageBox::Warning, tr("Bad Shader"),
+                            tr("Generated shader has been compiled with errors."), QMessageBox::Ok, this);
+        bad_shader_error->setDetailedText(renderer->frag_shader->log());
+        bad_shader_error->show();
+    }
+    setWindowTitle("RayMarcher - " + path);
+}
+
 QWidget *MainWindow::sliderWithLabel(const QString &str, QSlider *slider)
 {
     auto *layout = new QFormLayout();
@@ -311,15 +340,12 @@ QWidget *MainWindow::sliderWithLabel(const QString &str, QSlider *slider)
 
 QAction *MainWindow::prettyOpenFileAction(const QString &file, bool add_suffix)
 {
+    // TODO(NamorNiradnug): reading scene name via running scene with "--scene-name-only"
     auto *action = new QAction(file);
     action->setProperty("scene_file_name", file);
-    if (!Scene(file).getName().isEmpty())
-    {
-        action->setText(Scene(file).getName());
-    }
     if (add_suffix)
     {
-        if (file[0] == ":")
+        if (file[0] == ':')
         {
             action->setText(action->text() + " (Built-in)");
         }
@@ -331,11 +357,11 @@ QAction *MainWindow::prettyOpenFileAction(const QString &file, bool add_suffix)
     return action;
 }
 
-void MainWindow::setDisabledWithActions(QMenu *menu, bool value)
+void MainWindow::disableMenuWithActions(QMenu *menu, bool is_disabled)
 {
-    menu->setDisabled(value);
-    for (QAction *act : menu->actions())
+    menu->setDisabled(is_disabled);
+    for (QAction *act: menu->actions())
     {
-        act->setDisabled(value);
+        act->setDisabled(is_disabled);
     }
 }

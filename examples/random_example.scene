@@ -1,8 +1,0 @@
-NAME 'Random Example'
-SUN sin(TIME / 3.0) 1.0 cos(TIME / 3.0)
-SDFTYPE InfSpheres radius "\
-{ \
-    return length(vec3(mod(p.x + .5, 1.0) - .5, p.y, mod(p.z + .5, 1.0) - .5)) - o.radius; \
-}"
-SDF inf InfSpheres radius=0.4  1.0 0.0 0.0 0.0  0.0 sin(TIME)*2.0 0.0  1.0
-SCENE inf

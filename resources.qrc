@@ -1,18 +1,16 @@
 <RCC>
     <qresource prefix="/shaders">
-        <file>shaders/raymarcher.frag</file>
-        <file>shaders/vertexshader.vert</file>
-        <file>shaders/raymarchergpu.frag</file>
+        <file alias="vertexshader.vert">src/shaders/vertexshader.vert</file>
     </qresource>
     <qresource prefix="/about">
         <file>README.md</file>
         <file>ABOUT.html</file>
         <file>LICENSE</file>
     </qresource>
-    <qresource prefix="/examples">
-        <file>examples/cube_sphere_diff.scene</file>
-        <file>examples/spheres_intersection.scene</file>
-        <file>examples/random_example.scene</file>
-        <file>examples/smooth_union.scene</file>
+    <qresource prefix="/">
+        <file>examples/cube_sphere_diff.py</file>
+        <file>examples/spheres_intersection.py</file>
+        <file>examples/random_example.py</file>
+        <file>examples/smooth_union.py</file>
     </qresource>
 </RCC>

@@ -1,14 +1,14 @@
 ﻿#pragma once
 
-#include "scene.h"
-
 #include <QDateTime>
-#include <QFile>
+#include <QLabel>
+#include <QObject>
 #include <QOpenGLFunctions>
 #include <QOpenGLShader>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLWidget>
 #include <QTimer>
+#include <QVector>
 #include <QtMath>
 
 class ShaderRenderer : public QOpenGLWidget, protected QOpenGLFunctions
@@ -24,7 +24,7 @@ public:
     void setCameraControlMode(bool value);
     void cameraMovement(qreal delta);
     void cameraRotation();
-    void setScene(const QString &f);
+    void setFragmentShader(const QString &shader = "void main(){}");
 
 protected slots:
     void timerEvent(QTimerEvent *) override;
@@ -56,13 +56,18 @@ private:
         qreal min_hit_distance;
         qint32 max_steps;
     } properties;
+    struct Scene
+    {
+        QString name;
+    } scene;
     QOpenGLShaderProgram *program;
-    Scene scene = Scene("");
     QOpenGLShader *frag_shader;
-    QString source;
     bool is_time_running = true;
     qreal time_speed = 1;
-    qreal time = 0;
+    qreal time = 0.0;
+    QLabel *fps_label = new QLabel(this);
+    qint64 last_frame_time = QDateTime::currentMSecsSinceEpoch();
+    qint64 last_fps_update = QDateTime::currentMSecsSinceEpoch();
 };
 
 inline QRect ShaderRenderer::globalGeometry()

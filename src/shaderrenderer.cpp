@@ -1,21 +1,16 @@
 #include "shaderrenderer.h"
-#include "lazy.h"
 #include <QKeyEvent>
 #include <QPixmap>
 
-#define PERIODIC_FUNC                                                                                                  \
-    static qint64 last_call_time__ = QDateTime::currentMSecsSinceEpoch();                                              \
-    qint64 current_time__ = QDateTime::currentMSecsSinceEpoch();                                                       \
-    qreal delta = (current_time__ - last_call_time__) / 1000.0; /* time from last call of the function in secs */      \
-    last_call_time__ = current_time__;
-
 ShaderRenderer::ShaderRenderer(QWidget *parent) : QOpenGLWidget(parent)
 {
+    fps_label->setFont(QFont("Monospace"));
+    fps_label->setStyleSheet("QLabel { background-color: rgba(0, 0, 0, 150); }");
     computeNewDirection();
     startTimer(10);
 }
 
-void ShaderRenderer::mouseReleaseEvent(QMouseEvent *)
+void ShaderRenderer::mouseReleaseEvent(QMouseEvent * /*event*/)
 {
     setFocus(Qt::MouseFocusReason);
 }
@@ -30,7 +25,7 @@ void ShaderRenderer::keyReleaseEvent(QKeyEvent *ev)
     pressed_keys.remove(ev->key());
 }
 
-void ShaderRenderer::focusOutEvent(QFocusEvent *)
+void ShaderRenderer::focusOutEvent(QFocusEvent * /*event*/)
 {
     pressed_keys.clear();
     setCameraControlMode(false);
@@ -45,7 +40,7 @@ void ShaderRenderer::setCameraControlMode(bool value)
     {
         setFocus(Qt::OtherFocusReason);
         setCursor(QCursor(transparent_pixmap));
-        cursor().setPos(globalGeometry().center());
+        QCursor::setPos(globalGeometry().center());
     }
     else
     {
@@ -94,19 +89,18 @@ void ShaderRenderer::cameraRotation()
     cursor().setPos(globalGeometry().center());
 }
 
-void ShaderRenderer::setScene(const QString &f)
+void ShaderRenderer::setFragmentShader(const QString &shader)
 {
-    scene = Scene(f);
-    scene.addVariable("TIME", Lazy::number(&time));
-    scene.parse();
-    frag_shader->compileSourceCode(scene.generateShader());
-    program->link();
     setCameraControlMode(false);
+    frag_shader->compileSourceCode(shader);
+    program->link();
 }
 
 void ShaderRenderer::timerEvent(QTimerEvent * /*event*/)
 {
-    PERIODIC_FUNC;
+    auto current_time = QDateTime::currentMSecsSinceEpoch();
+    auto delta = (qreal)(current_time - last_frame_time) / 1000.0; // time since last frame in sec
+    last_frame_time = current_time;
     if (is_time_running)
     {
         time += delta * time_speed;
@@ -116,21 +110,23 @@ void ShaderRenderer::timerEvent(QTimerEvent * /*event*/)
         cameraRotation();
         cameraMovement(delta);
     }
-    if (program->isLinked())
+    if (current_time - last_fps_update >= 500) // updating FPS every 500 msec
     {
-        update();
+        fps_label->setText(QString::number(qFloor(1 / delta)));
+        fps_label->resize(fps_label->sizeHint());
+        last_fps_update = current_time;
     }
+    update();
 }
 
 void ShaderRenderer::initializeGL()
 {
     initializeOpenGLFunctions();
     frag_shader = new QOpenGLShader(QOpenGLShader::Fragment, this);
-    frag_shader->compileSourceCode("void main(){}");
     program = new QOpenGLShaderProgram(this);
-    program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/shaders/vertexshader.vert");
+    program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/vertexshader.vert");
     program->addShader(frag_shader);
-    program->link();
+    setFragmentShader();
     program->enableAttributeArray("attr_pos");
     static const GLfloat vertices[] = {1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f};
     program->setAttributeArray("attr_pos", GL_FLOAT, vertices, 2);
@@ -148,18 +144,21 @@ void ShaderRenderer::paintGL()
     if (program->isLinked())
     {
         program->bind();
+        qDebug() << "time:" << time;
         program->setUniformValue("TIME", (GLfloat)time);
         program->setUniformValue("WIDTH", (GLfloat)geometry().width());
         program->setUniformValue("HEIGHT", (GLfloat)geometry().height());
         program->setUniformValue("camera.position", camera.position);
         program->setUniformValue("camera.direction", camera.direction);
         program->setUniformValue("camera.fov2_tan", (GLfloat)qTan(camera.fov / 2));
-        program->setUniformValue("MAIN_LIGHT_DIRECTION", QVector3D(0.5, sin(time * 0.2), cos(time * 0.2)).normalized());
-        program->setUniformValue("SHADOWS_ENABLED", properties.is_shadows_enabled);
+        // TODO(NamorNiradnug): Defining lighting source position in scene
+        program->setUniformValue("sun", QVector3D(0.5, qSin(time * 0.2), qCos(time * 0.2)).normalized());
+        program->setUniformValue("TIME2_SIN", (GLfloat)qSin(time / 2));
+        program->setUniformValue("TIME2_COS", (GLfloat)qCos(time / 2));
+        program->setUniformValue("SHADOWS_ENABLED", (GLint)properties.is_shadows_enabled);
         program->setUniformValue("RENDER_DISTANCE", (GLfloat)properties.render_distance);
         program->setUniformValue("MIN_HIT_DIST", (GLfloat)properties.min_hit_distance);
         program->setUniformValue("MAX_STEPS", properties.max_steps);
-        scene.setUniformsValues(program);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         program->release();
     }
