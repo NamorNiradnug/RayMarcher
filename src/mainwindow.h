@@ -25,13 +25,10 @@ private slots:
 
     void openSceneDialog();
     void openSceneByTriggeredAction();
-    void openSetting();
     void toggleMenubar();
     void toggleFullscreen();
     void about();
     void license();
-
-    void toggleShadows();
 
     void changeRenderDistance(int slider_value);
     void changeMaxSteps(int slider_value);
@@ -51,6 +48,7 @@ private:
     void createOpenBuiltinMenu();
 
     inline bool checkOpeningFileExists(const QString &path);
+    inline void setNoScene();
 
     ShaderRenderer *renderer;
     QString current_scene;
@@ -58,7 +56,6 @@ private:
     QMessageBox *info_box = new QMessageBox(QMessageBox::Information, tr("RayMarcher - status"), "",
                                             QMessageBox::Ok | QMessageBox::Close, this);
 
-    // UI variables
     QToolBar *raymarching_properties = new QToolBar(tr("RayMarching"), this);
     QToolBar *camera_properties = new QToolBar(tr("Camera"), this);
 
@@ -72,7 +69,7 @@ private:
     QMenu *open_recent_menu = new QMenu(tr("Open &Recent"));
     QAction *reload_act = new QAction(QIcon::fromTheme("view-refresh"), tr("Re&load Current Scene"));
 
-    QAction *open_setting_act = new QAction(tr("&Settings"));
+    QAction *open_setting_act = new QAction(QIcon::fromTheme("configure"), tr("&Settings"));
 
     QAction *quit_act = new QAction(QIcon::fromTheme("application-exit"), tr("&Quit"));
 
@@ -84,8 +81,8 @@ private:
     QAction *show_menubar_act = new QAction(tr("Show &Menubar"));
     QAction *show_fullscreen_act = new QAction(QIcon::fromTheme("view-fullscreen"), tr("Show &Fullscreen"));
 
-    QAction *about_act = new QAction(QIcon::fromTheme("system-help"), tr("&About SimpleRayMarcher"));
-    QAction *license_act = new QAction(QIcon::fromTheme(""), tr("License"));
+    QAction *about_act = new QAction(QIcon::fromTheme("system-help"), tr("&About RayMarcher"));
+    QAction *license_act = new QAction(tr("License"));
     QAction *about_qt_act = new QAction(QIcon::fromTheme("qt"), tr("About &Qt..."));
 
     QAction *enable_shadows_act = new QAction(tr("Enable Shadows"));
@@ -96,8 +93,14 @@ inline bool MainWindow::checkOpeningFileExists(const QString &path)
     if (!QFile::exists(path))
     {
         QMessageBox::warning(this, tr("File Not Found"), tr("File at '") + path + "' cannot be found!");
-        renderer->setFragmentShader();
+        renderer->setNoShader();
         return false;
     }
     return true;
+}
+
+inline void MainWindow::setNoScene()
+{
+    renderer->setNoShader();
+    disableMenuWithActions(control_menu);
 }

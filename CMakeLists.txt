@@ -22,6 +22,8 @@ add_executable(${PROJECT_NAME}
     src/mainwindow.h
     src/shaderrenderer.cpp
     src/shaderrenderer.h
+    src/settingsmenu.cpp
+    src/settingsmenu.h
     resources.qrc)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt::Widgets)

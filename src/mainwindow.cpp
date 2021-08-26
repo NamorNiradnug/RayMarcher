@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "settingsmenu.h"
 
 #include <QApplication>
 #include <QFileDialog>
@@ -27,7 +28,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     file_menu->addMenu(open_recent_menu);
     file_menu->addAction(reload_act);
     file_menu->addSeparator();
-    open_setting_act->setEnabled(false);
     file_menu->addAction(open_setting_act);
     file_menu->addSeparator();
     file_menu->addAction(quit_act);
@@ -104,7 +104,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 
     connect(open_act, &QAction::triggered, this, &MainWindow::openSceneDialog);
     connect(reload_act, &QAction::triggered, [=] { openScene(current_scene); });
-    connect(open_setting_act, &QAction::triggered, this, &MainWindow::openSetting);
+    connect(open_setting_act, &QAction::triggered,
+            [=]
+            {
+                auto *settings_menu = new SettingsMenu(this);
+                connect(settings_menu, &SettingsMenu::settingsSaved, renderer, &ShaderRenderer::updateFrameTime);
+                settings_menu->show();
+            });
     connect(quit_act, &QAction::triggered, this, &MainWindow::close);
     connect(pause_time_act, &QAction::toggled, [=] { renderer->is_time_running = !pause_time_act->isChecked(); });
     connect(camera_control_mode_act, &QAction::toggled,
@@ -145,7 +151,6 @@ void MainWindow::openScene(const QString &path)
                 running_file_path = temp_file->fileName();
             }
         }
-        QString python_cmd = "python3";
         if (scene_processor != nullptr)
         {
             info_box->setText(tr("Aborting previous scene processing..."));
@@ -153,12 +158,23 @@ void MainWindow::openScene(const QString &path)
             scene_processor->disconnect();
             scene_processor->kill();
         }
+        QString python = QSettings().value("pythonPath", QVariant("/usr/bin/python3")).toString();
+        if (!QFile(python).exists())
+        {
+            info_box->hide();
+            QMessageBox::critical(this, tr("Python Not Found"),
+                                  "<html><body><p>" + tr("Cannot find python interpreter at") + python + ".</p><p>" +
+                                      tr("Please set path to existing python interpreter in") + "<b>" + tr("Settings") +
+                                      ">" + tr("Python Path") + "</b></p></body></html>");
+            setNoScene();
+            return;
+        }
         info_box->setText(tr("Processing scene..."));
         info_box->show();
         scene_processor = new QProcess(this);
         connect(scene_processor, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
                 [=] { afterSceneProcessingFinished(scene_processor, path); });
-        auto command = python_cmd + " " + running_file_path;
+        auto command = python + " " + running_file_path;
         qDebug() << "Running" << command;
         scene_processor->start(command);
     }
@@ -167,12 +183,12 @@ void MainWindow::openScene(const QString &path)
 void MainWindow::updateOpenRecentMenu()
 {
     open_recent_menu->clear();
-    QSettings settings;
-    QStringList history = settings.value("history").toStringList();
     QList<QAction *> recent_files;
-    for (int i = 0; i < settings.value("max_recent", 5).toInt() && i < history.size(); ++i)
+    auto settings = QSettings();
+    auto history = settings.value("history").toStringList();
+    for (int i = 0; i < settings.value("maxRecent", 5).toInt() && i < history.size(); ++i)
     {
-        recent_files.append(prettyOpenFileAction(history[i], true));
+        recent_files.append(prettyOpenFileAction(history[history.size() - 1 - i], true));
         connect(recent_files.back(), &QAction::triggered, this, &MainWindow::openSceneByTriggeredAction);
         recent_files.back()->setDisabled(!QFile(recent_files.back()->property("scene_file_name").toString()).exists());
     }
@@ -213,20 +229,14 @@ void MainWindow::openSceneByTriggeredAction()
     }
 }
 
-void MainWindow::openSetting()
-{
-}
-
 void MainWindow::toggleMenubar()
 {
-    static int saved_height = menuBar()->height();
     if (show_menubar_act->isChecked())
     {
-        menuBar()->setFixedHeight(saved_height);
+        menuBar()->setFixedHeight(menuBar()->sizeHint().height());
     }
     else
     {
-        saved_height = menuBar()->height();
         menuBar()->setFixedHeight(0);
     }
 }
@@ -261,10 +271,6 @@ void MainWindow::license()
     text.replace("$$", "\n\n");
     QMessageBox::about(this, tr("RayMarcher License"), text);
     f.close();
-}
-
-void MainWindow::toggleShadows()
-{
 }
 
 void MainWindow::changeRenderDistance(int slider_value)
@@ -312,7 +318,7 @@ void MainWindow::afterSceneProcessingFinished(QProcess *python, const QString &p
                             tr("Error while processing scene at ") + path + ".", QMessageBox::Ok, this);
         scene_processing_error->setDetailedText(error);
         scene_processing_error->show();
-        renderer->setFragmentShader();
+        setNoScene();
         return;
     }
     renderer->setFragmentShader(output);

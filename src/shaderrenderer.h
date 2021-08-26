@@ -24,7 +24,11 @@ public:
     void setCameraControlMode(bool value);
     void cameraMovement(qreal delta);
     void cameraRotation();
-    void setFragmentShader(const QString &shader = "void main(){}");
+    void setFragmentShader(const QString &shader);
+    void setNoShader();
+
+public slots:
+    void updateFrameTime();
 
 protected slots:
     void timerEvent(QTimerEvent *) override;
@@ -62,12 +66,14 @@ private:
     } scene;
     QOpenGLShaderProgram *program;
     QOpenGLShader *frag_shader;
+    bool shader_set = false;
     bool is_time_running = true;
     qreal time_speed = 1;
     qreal time = 0.0;
     QLabel *fps_label = new QLabel(this);
     qint64 last_frame_time = QDateTime::currentMSecsSinceEpoch();
     qint64 last_fps_update = QDateTime::currentMSecsSinceEpoch();
+    int current_timer_id;
 };
 
 inline QRect ShaderRenderer::globalGeometry()
